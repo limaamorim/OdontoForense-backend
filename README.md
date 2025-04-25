@@ -29,12 +29,7 @@ npm install
 ```
 
 ### 3. Criar arquivo `.env`
-Crie um arquivo `.env` na pasta `backend` com o seguinte conteúdo:
-```env
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/odontocrim
-JWT_SECRET=segredosecreto123
-```
+Crie um arquivo `.env` na pasta `backend` 
 
 ### 4. Rodar o servidor
 ```bash
@@ -84,6 +79,10 @@ backend/
 ## Contato
 
 Para dúvidas ou colaborações:
-- Dev: [Seu Nome]
-- Email: dev@email.com
+- Dev:
+- José Fernando
+- Marcello Henrique
+- Glewbber Spindola
+- Gabriel Ernandes
+- Laís Amorim
 
