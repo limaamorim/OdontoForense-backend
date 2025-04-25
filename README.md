@@ -78,7 +78,6 @@ backend/
 
 ## Contato
 
-Para dúvidas ou colaborações:
 - Dev:
 - José Fernando
 - Marcello Henrique
