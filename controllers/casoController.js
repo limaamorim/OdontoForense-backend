@@ -3,41 +3,32 @@ const Evidencia = require('../models/Evidencia');
 const Usuario = require('../models/Usuario');
 
 exports.criarCaso = async (req, res) => {
-  try {
-    if (req.usuario.tipo !== 'perito') {
-      return res.status(403).json({ success: false, error: 'Apenas peritos podem criar casos' });
-    }
-
-    const { numeroCaso, titulo, descricao, dataOcorrido, local } = req.body;
-    if (!numeroCaso || !titulo || !descricao || !dataOcorrido || !local) {
-      return res.status(400).json({
-        success: false,
-        error: 'Campos obrigatórios faltando: numeroCaso, titulo, descricao, dataOcorrido, local'
-      });
-    }
-
-    const casoExistente = await Caso.findOne({ numeroCaso });
-    if (casoExistente) {
-      return res.status(400).json({ success: false, error: 'Já existe um caso com este número' });
-    }
-
-    const novoCaso = new Caso({
-      ...req.body,
-      peritoResponsavel: req.usuario.id
-    });
-
-    const casoSalvo = await novoCaso.save();
-
-    res.status(201).json({ success: true, data: casoSalvo });
-
-  } catch (err) {
-    console.error('Erro ao criar caso:', err.message);
-    if (err.name === 'ValidationError') {
-      const errors = Object.values(err.errors).map(el => el.message);
-      return res.status(400).json({ success: false, error: 'Erro de validação', details: errors });
-    }
-    res.status(500).json({ success: false, error: 'Erro no servidor ao criar caso' });
+  console.log('TIPO DE USUÁRIO NO BACKEND:', req.usuario.tipo);
+  const tiposPermitidos = ['perito', 'administrador'];
+  if (!tiposPermitidos.includes(req.usuario.tipo)) {
+    return res.status(403).json({ success: false, error: 'Apenas peritos ou administradores podem criar casos' });
   }
+
+  const { numeroCaso, titulo, descricao, dataOcorrido, local } = req.body;
+  if (!numeroCaso || !titulo || !descricao || !dataOcorrido || !local) {
+    return res.status(400).json({
+      success: false,
+      error: 'Campos obrigatórios faltando: numeroCaso, titulo, descricao, dataOcorrido, local'
+    });
+  }
+
+  const casoExistente = await Caso.findOne({ numeroCaso });
+  if (casoExistente) {
+    return res.status(400).json({ success: false, error: 'Já existe um caso com este número' });
+  }
+
+  const novoCaso = new Caso({
+    ...req.body,
+    peritoResponsavel: req.usuario.id
+  });
+
+  const casoSalvo = await novoCaso.save();
+  res.status(201).json({ success: true, data: casoSalvo });
 };
 
 exports.listarCasos = async (req, res) => {
@@ -85,7 +76,7 @@ exports.obterCaso = async (req, res) => {
     console.log('Usuário tentando acessar o caso:', usuario);
 
     // Agora qualquer admin ou perito pode visualizar qualquer caso
-    if (usuario.tipo === 'admin' || usuario.tipo === 'perito') {
+    if (usuario.tipo === 'administrador' || usuario.tipo === 'perito') {
       return res.json({ success: true, data: caso });
     }
 
