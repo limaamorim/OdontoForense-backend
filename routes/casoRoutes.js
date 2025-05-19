@@ -10,8 +10,12 @@ router.use(authMiddleware);
 router.post('/', casoController.criarCaso);
 router.get('/', casoController.listarCasos);
 router.get('/buscar', casoController.buscarCasos);
-router.get('/recentes', casoController.obterCasosRecentes); // <- ✅ mover para cima
+router.get('/recentes', casoController.obterCasosRecentes);
 router.get('/:id', casoController.obterCaso);
 router.put('/:id', casoController.atualizarCaso);
+router.delete('/:id', casoController.deletarCaso);
+
+// ✅ Rota para adicionar evidência vinculada a um caso
+router.post('/:id/evidencias', uploadMiddleware.single('arquivo'), casoController.adicionarEvidencia);
 
 module.exports = router;
