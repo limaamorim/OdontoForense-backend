@@ -213,3 +213,23 @@ exports.obterCasosRecentes = async (req, res) => {
     res.status(500).json({ success: false, error: 'Erro ao buscar casos recentes' });
   }
 };
+exports.deletarCaso = async (req, res) => {
+  try {
+    const caso = await Caso.findById(req.params.id);
+
+    if (!caso) {
+      return res.status(404).json({ success: false, error: 'Caso não encontrado' });
+    }
+
+    if (req.usuario.tipo === 'perito' && caso.peritoResponsavel.toString() !== req.usuario.id) {
+      return res.status(403).json({ success: false, error: 'Você só pode excluir seus próprios casos' });
+    }
+
+    await Caso.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Caso deletado com sucesso' });
+  } catch (err) {
+    console.error('Erro ao deletar caso:', err.message);
+    res.status(500).json({ success: false, error: 'Erro no servidor ao deletar caso' });
+  }
+};
+
