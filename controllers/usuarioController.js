@@ -226,3 +226,16 @@ exports.reativarUsuario = async (req, res) => {
     res.status(500).send('Erro no servidor');
   }
 };
+exports.excluirUsuario = async (req, res) => {
+  try {
+    if (req.usuario.tipo !== 'administrador') {
+      return res.status(403).json({ error: 'Não autorizado' });
+    }
+
+    await Usuario.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Usuário excluído com sucesso' });
+  } catch (err) {
+    console.error('Erro ao excluir usuário:', err.message);
+    res.status(500).json({ success: false, error: 'Erro no servidor ao excluir usuário' });
+  }
+};
