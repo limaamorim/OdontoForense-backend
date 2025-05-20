@@ -13,5 +13,7 @@ router.get('/:email', usuarioController.obterUsuario);
 router.put('/:id', usuarioController.atualizarUsuario);
 router.put('/:id/desativar', usuarioController.desativarUsuario);
 router.put('/:id/reativar', usuarioController.reativarUsuario);
+router.delete('/:id', usuarioController.excluirUsuario);
+
 
 module.exports = router;
