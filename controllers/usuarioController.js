@@ -3,12 +3,12 @@ const bcrypt = require('bcryptjs');
 
 exports.criarUsuario = async (req, res) => {
   // 0. RESTRIÇÃO DE ACESSO
-  if (!req.usuario || req.usuario.tipo !== 'administrador') {
-    return res.status(403).json({
-      success: false,
-      error: 'Apenas administradores podem criar novos usuários'
-    });
-  }
+  if (!req.usuario || !['administrador', 'perito'].includes(req.usuario.tipo)) {
+  return res.status(403).json({
+    success: false,
+    error: 'Apenas administradores e peritos podem criar novos usuários'
+  });
+}
 
   // 1. VALIDAÇÃO INICIAL
   if (!req.body || typeof req.body !== 'object') {
