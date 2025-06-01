@@ -14,11 +14,13 @@ exports.criarEvidencia = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Arquivo não enviado.' });
     }
 
+    const urlPublica = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+
     const novaEvidencia = await Evidencia.create({
       caso: casoId,
       tipo,
       descricao,
-      caminhoArquivo: req.file.path,
+      caminhoArquivo: urlPublica,
       uploadPor: req.usuario.id
     });
 
