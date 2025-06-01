@@ -1,6 +1,7 @@
 const Caso = require('../models/Caso');
 const Evidencia = require('../models/Evidencia');
 const Usuario = require('../models/Usuario');
+const Vitima = require('../models/Vitima');
 
 exports.criarCaso = async (req, res) => {
   console.log('TIPO DE USUÁRIO NO BACKEND:', req.usuario.tipo);
@@ -9,7 +10,7 @@ exports.criarCaso = async (req, res) => {
     return res.status(403).json({ success: false, error: 'Apenas peritos ou administradores podem criar casos' });
   }
 
-  const { numeroCaso, titulo, descricao, dataOcorrido, local } = req.body;
+  const { numeroCaso, titulo, descricao, dataOcorrido, local, vitimas } = req.body;
   if (!numeroCaso || !titulo || !descricao || !dataOcorrido || !local) {
     return res.status(400).json({
       success: false,
@@ -23,9 +24,27 @@ exports.criarCaso = async (req, res) => {
   }
 
   const novoCaso = new Caso({
-    ...req.body,
+    numeroCaso,
+    titulo,
+    descricao,
+    dataOcorrido,
+    local,
     peritoResponsavel: req.usuario.id
   });
+
+  // Criar vítimas (se fornecidas)
+  if (vitimas && Array.isArray(vitimas)) {
+    const vitimaIds = [];
+    for (const vitimaData of vitimas) {
+      const novaVitima = new Vitima({
+        ...vitimaData,
+        casos: [novoCaso._id]
+      });
+      const vitimaSalva = await novaVitima.save();
+      vitimaIds.push(vitimaSalva._id);
+    }
+    novoCaso.vitimas = vitimaIds;
+  }
 
   const casoSalvo = await novoCaso.save();
   res.status(201).json({ success: true, data: casoSalvo });
@@ -64,9 +83,9 @@ exports.listarCasos = async (req, res) => {
 exports.obterCaso = async (req, res) => {
   try {
     const caso = await Caso.findById(req.params.id)
-  .populate('peritoResponsavel', 'nome email')
-  .populate('evidencias'); // <-- isso carrega os dados completos das evidências
-
+      .populate('peritoResponsavel', 'nome email')
+      .populate('evidencias')
+      .populate('vitimas'); // <-- adiciona as vítimas
 
     if (!caso) {
       return res.status(404).json({ success: false, error: 'Caso não encontrado' });
@@ -75,14 +94,11 @@ exports.obterCaso = async (req, res) => {
     const usuario = req.usuario;
     console.log('Usuário tentando acessar o caso:', usuario);
 
-    // Agora qualquer admin ou perito pode visualizar qualquer caso
     if (usuario.tipo === 'administrador' || usuario.tipo === 'perito') {
       return res.json({ success: true, data: caso });
     }
 
-    // Outros tipos de usuário são bloqueados
     return res.status(403).json({ success: false, error: 'Acesso não autorizado' });
-
   } catch (err) {
     console.error('Erro ao obter caso:', err.message);
     return res.status(500).json({ success: false, error: 'Erro no servidor ao obter caso' });
