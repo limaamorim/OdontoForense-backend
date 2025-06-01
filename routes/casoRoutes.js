@@ -4,6 +4,7 @@ const casoController = require('../controllers/casoController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const uploadMiddleware = require('../middlewares/uploadMiddleware');
 
+// Aplica o middleware de autenticação para todas as rotas
 router.use(authMiddleware);
 
 // Rotas protegidas
@@ -15,7 +16,7 @@ router.get('/:id', casoController.obterCaso);
 router.put('/:id', casoController.atualizarCaso);
 router.delete('/:id', casoController.deletarCaso);
 
-// ✅ Rota para adicionar evidência vinculada a um caso
+// Rota para adicionar evidência vinculada a um caso
 router.post('/:id/evidencias', uploadMiddleware.single('arquivo'), casoController.adicionarEvidencia);
 
 module.exports = router;
