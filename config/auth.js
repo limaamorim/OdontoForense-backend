@@ -1,4 +1,4 @@
-require('dotenv').config(); // Carrega as variáveis do .env;
+require('dotenv').config(); // Carrega as variáveis do .env
 
 module.exports = {
   // Configurações de autenticação
