@@ -12,8 +12,9 @@ const authRoutes = require('./routes/authRoutes');
 const casoRoutes = require('./routes/casoRoutes');
 const laudoRoutes = require('./routes/laudoRoutes');
 const usuarioRoutes = require('./routes/usuarioRoutes');
-const relatorioRoutes = require('./routes/relatorioRoutes'); // Rota de relatórios
-const evidenciaRoutes = require('./routes/evidenciaRoutes'); // Rota de evidências
+const relatorioRoutes = require('./routes/relatorioRoutes');
+const evidenciaRoutes = require('./routes/evidenciaRoutes');
+const vitimaRoutes = require('./routes/vitimaRoutes'); // <-- nova rota adicionada
 
 // Configuração do Express
 const app = express();
@@ -31,7 +32,6 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/odontoforen
     process.exit(1);
   });
 
-// Eventos de conexão do MongoDB
 mongoose.connection.on('connected', () => {
   console.log(`📊 Banco de dados: ${mongoose.connection.db.databaseName}`);
 });
@@ -52,17 +52,20 @@ app.use(morgan('dev'));
 // =============================================
 // 3. ROTAS
 // =============================================
-app.use('/api/auth', authRoutes); // Autenticação
-app.use('/api/casos', casoRoutes); // Casos
-app.use('/api/laudos', laudoRoutes); // Laudos
-app.use('/api/usuarios', usuarioRoutes); // Usuários
+app.use('/api/auth', authRoutes);           // Autenticação
+app.use('/api/casos', casoRoutes);          // Casos
+app.use('/api/laudos', laudoRoutes);        // Laudos
+app.use('/api/usuarios', usuarioRoutes);    // Usuários
 app.use('/api/relatorios', relatorioRoutes); // Relatórios
 app.use('/api/evidencias', evidenciaRoutes); // Evidências
+app.use('/api/vitimas', vitimaRoutes);      // <-- nova rota de vítimas
 
 // Arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Rota de status
+// =============================================
+// 4. ROTA DE STATUS
+// =============================================
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'online',
@@ -74,7 +77,7 @@ app.get('/', (req, res) => {
 });
 
 // =============================================
-// 4. TRATAMENTO DE ERROS
+// 5. TRATAMENTO DE ERROS
 // =============================================
 app.use((err, req, res, next) => {
   console.error('[ERRO]', err.stack);
@@ -85,7 +88,7 @@ app.use((err, req, res, next) => {
 });
 
 // =============================================
-// 5. INICIALIZAÇÃO DO SERVIDOR
+// 6. INICIALIZAÇÃO DO SERVIDOR
 // =============================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
