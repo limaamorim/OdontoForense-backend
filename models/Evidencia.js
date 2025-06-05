@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 
 const EvidenciaSchema = new mongoose.Schema({
   caso: {
@@ -28,10 +29,6 @@ const EvidenciaSchema = new mongoose.Schema({
     ref: 'Usuario',
     required: true
   },
-  imagem: {
-    type: String,
-    default: ''
-  }
 });
 
 module.exports = mongoose.model('Evidencia', EvidenciaSchema);
