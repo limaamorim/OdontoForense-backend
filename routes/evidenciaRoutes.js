@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const EvidenciaController = require('../controllers/evidenciaController');
+const evidenciaController = require('../controllers/evidenciaController');
 const upload = require('../middlewares/uploadMiddleware');
-const auth = require('../middlewares/authMiddleware');
 
-router.post('/casos/:casoId/evidencias', auth, upload.single('arquivo'), EvidenciaController.criarEvidencia);
-router.get('/casos/:casoId/evidencias', auth, EvidenciaController.listarEvidenciasPorCaso);
-router.put('/evidencias/:id', auth, EvidenciaController.atualizarEvidencia);
-router.delete('/evidencias/:id', auth, EvidenciaController.deletarEvidencia);
+// POST /evidencias
+router.post('/', upload.single('imagem'), evidenciaController.criarEvidencia);
+
+// GET /evidencias
+router.get('/', evidenciaController.listarEvidencias);
+
+// DELETE /evidencias/:id
+router.delete('/:id', evidenciaController.deletarEvidencia);
 
 module.exports = router;
