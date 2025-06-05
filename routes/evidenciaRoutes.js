@@ -1,26 +1,104 @@
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
+const Evidencia = require('../models/Evidencia');
 const fs = require('fs');
-const router = express.Router();
+const path = require('path');
 
-const EvidenciaController = require('../controllers/evidenciaController');
-const auth = require('../middlewares/authMiddleware'); // middleware de autenticação
+// Criar nova evidência
+exports.criarEvidencia = async (req, res) => {
+  try {
+    const { casoId } = req.params;
+    const { tipo, descricao } = req.body;
+    const arquivo = req.file?.filename; // Nome do arquivo salvo pelo multer
 
-// Configuração do multer (igual ao mini projeto)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
+    // Validação básica
+    if (!arquivo || !tipo || !descricao || !casoId || !req.usuario?.id) {
+      // Se houver arquivo mas validação falhar, remova-o
+      if (req.file) {
+        fs.unlinkSync(path.join(__dirname, '../uploads', req.file.filename));
+      }
+      return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
+    }
 
-const upload = multer({ storage });
+    const novaEvidencia = await Evidencia.create({
+      caso: casoId,
+      tipo,
+      descricao,
+      caminhoArquivo: `/uploads/${arquivo}`, // Caminho relativo para acesso
+      uploadPor: req.usuario.id
+    });
 
-// POST /casos/:casoId/evidencias
-router.post('/casos/:casoId/evidencias', auth, upload.single('arquivo'), EvidenciaController.criarEvidencia);
+    res.status(201).json(novaEvidencia);
+  } catch (err) {
+    // Se ocorrer erro, remove o arquivo enviado
+    if (req.file) {
+      fs.unlinkSync(path.join(__dirname, '../uploads', req.file.filename));
+    }
+    console.error('Erro ao salvar evidência:', err);
+    res.status(500).json({ error: 'Erro ao salvar evidência' });
+  }
+};
 
-// GET, PUT, DELETE (mantém como está)
-router.get('/casos/:casoId/evidencias', auth, EvidenciaController.listarEvidenciasPorCaso);
-router.put('/evidencias/:id', auth, EvidenciaController.atualizarEvidencia);
-router.delete('/evidencias/:id', auth, EvidenciaController.deletarEvidencia);
+exports.listarEvidenciasPorCaso = async (req, res) => {
+  try {
+    const { casoId } = req.params;
 
-module.exports = router;
+    const evidencias = await Evidencia.find({ caso: casoId })
+      .populate('uploadPor', 'nome')
+      .populate('caso');
+
+    res.status(200).json({
+      success: true,
+      data: evidencias,
+    });
+  } catch (err) {
+    console.error('Erro ao listar evidências:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar evidências' });
+  }
+};
+
+// Atualizar evidência
+exports.atualizarEvidencia = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const atualizacoes = req.body;
+
+    const evidenciaAtualizada = await Evidencia.findByIdAndUpdate(id, atualizacoes, { new: true });
+
+    res.status(200).json({
+      success: true,
+      data: evidenciaAtualizada,
+    });
+  } catch (err) {
+    console.error('Erro ao atualizar evidência:', err);
+    res.status(500).json({ success: false, error: 'Erro ao atualizar evidência' });
+  }
+};
+
+// Deletar evidência
+exports.deletarEvidencia = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const evidencia = await Evidencia.findById(id);
+    if (!evidencia) {
+      return res.status(404).json({ success: false, error: 'Evidência não encontrada' });
+    }
+
+    // Remover imagem do disco
+    if (evidencia.imagem) {
+      const imagePath = path.join(__dirname, '../uploads', evidencia.imagem);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    await Evidencia.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      data: 'Evidência deletada com sucesso!',
+    });
+  } catch (err) {
+    console.error('Erro ao deletar evidência:', err);
+    res.status(500).json({ success: false, error: 'Erro ao deletar evidência' });
+  }
+};
