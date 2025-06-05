@@ -1,104 +1,63 @@
 const Evidencia = require('../models/Evidencia');
+const Caso = require('../models/Caso');
 const fs = require('fs');
 const path = require('path');
 
-// Criar nova evidência
+// POST /evidencias
 exports.criarEvidencia = async (req, res) => {
+  const { nome, descricao, tipo, caso } = req.body;
+  const imagem = req.file?.filename;
+
+  if (!imagem) {
+    return res.status(400).json({ error: 'Imagem é obrigatória' });
+  }
+
   try {
-    const { casoId } = req.params;
-    const { tipo, descricao } = req.body;
-    const arquivo = req.file?.filename; // Nome do arquivo salvo pelo multer
-
-    // Validação básica
-    if (!arquivo || !tipo || !descricao || !casoId || !req.usuario?.id) {
-      // Se houver arquivo mas validação falhar, remova-o
-      if (req.file) {
-        fs.unlinkSync(path.join(__dirname, '../uploads', req.file.filename));
-      }
-      return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
-    }
-
-    const novaEvidencia = await Evidencia.create({
-      caso: casoId,
-      tipo,
+    const evidencia = await Evidencia.create({
+      nome,
       descricao,
-      caminhoArquivo: `/uploads/${arquivo}`, // Caminho relativo para acesso
-      uploadPor: req.usuario.id
+      tipo,
+      imagem,
+      caso
     });
 
-    res.status(201).json(novaEvidencia);
+    await Caso.findByIdAndUpdate(caso, { $push: { evidencias: evidencia._id } });
+
+    res.status(201).json(evidencia);
   } catch (err) {
-    // Se ocorrer erro, remove o arquivo enviado
-    if (req.file) {
-      fs.unlinkSync(path.join(__dirname, '../uploads', req.file.filename));
-    }
-    console.error('Erro ao salvar evidência:', err);
     res.status(500).json({ error: 'Erro ao salvar evidência' });
   }
 };
 
-exports.listarEvidenciasPorCaso = async (req, res) => {
+// GET /evidencias
+exports.listarEvidencias = async (req, res) => {
   try {
-    const { casoId } = req.params;
-
-    const evidencias = await Evidencia.find({ caso: casoId })
-      .populate('uploadPor', 'nome')
-      .populate('caso');
-
-    res.status(200).json({
-      success: true,
-      data: evidencias,
-    });
+    const evidencias = await Evidencia.find().populate('caso');
+    res.json(evidencias);
   } catch (err) {
-    console.error('Erro ao listar evidências:', err);
-    res.status(500).json({ success: false, error: 'Erro ao listar evidências' });
+    res.status(500).json({ error: 'Erro ao buscar evidências' });
   }
 };
 
-// Atualizar evidência
-exports.atualizarEvidencia = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const atualizacoes = req.body;
-
-    const evidenciaAtualizada = await Evidencia.findByIdAndUpdate(id, atualizacoes, { new: true });
-
-    res.status(200).json({
-      success: true,
-      data: evidenciaAtualizada,
-    });
-  } catch (err) {
-    console.error('Erro ao atualizar evidência:', err);
-    res.status(500).json({ success: false, error: 'Erro ao atualizar evidência' });
-  }
-};
-
-// Deletar evidência
+// DELETE /evidencias/:id
 exports.deletarEvidencia = async (req, res) => {
   try {
-    const { id } = req.params;
+    const evidencia = await Evidencia.findById(req.params.id);
 
-    const evidencia = await Evidencia.findById(id);
     if (!evidencia) {
-      return res.status(404).json({ success: false, error: 'Evidência não encontrada' });
+      return res.status(404).json({ error: 'Evidência não encontrada' });
     }
 
-    // Remover imagem do disco
-    if (evidencia.imagem) {
-      const imagePath = path.join(__dirname, '../uploads', evidencia.imagem);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    const imagePath = path.join(__dirname, '../uploads', evidencia.imagem);
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
     }
 
-    await Evidencia.findByIdAndDelete(id);
+    await Caso.findByIdAndUpdate(evidencia.caso, { $pull: { evidencias: evidencia._id } });
+    await Evidencia.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({
-      success: true,
-      data: 'Evidência deletada com sucesso!',
-    });
+    res.json({ message: 'Evidência deletada com sucesso' });
   } catch (err) {
-    console.error('Erro ao deletar evidência:', err);
-    res.status(500).json({ success: false, error: 'Erro ao deletar evidência' });
+    res.status(500).json({ error: 'Erro ao deletar evidência' });
   }
 };
