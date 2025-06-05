@@ -1,30 +1,33 @@
 const mongoose = require('mongoose');
-const mongoosePaginate = require('mongoose-paginate-v2');
 
 const EvidenciaSchema = new mongoose.Schema({
-  caso: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Caso',
-    required: true
+  nome: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
+  descricao: {
+    type: String,
+    trim: true,
+    maxlength: 500
   },
   tipo: {
     type: String,
     enum: ['foto', 'documento', 'radiografia', 'modelo_dental', 'outros'],
     required: true
   },
-  descricao: {
+  imagem: {
     type: String,
     required: true
   },
-  caminhoArquivo: {
-    type: String,
+  caso: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Caso',
     required: true
-  },
-  dataUpload: {
-    type: Date,
-    default: Date.now
-  },
-  
+  }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Evidencia', EvidenciaSchema);
