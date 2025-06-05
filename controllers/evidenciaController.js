@@ -7,32 +7,36 @@ exports.criarEvidencia = async (req, res) => {
   try {
     const { casoId } = req.params;
     const { tipo, descricao } = req.body;
-    const arquivo = req.file?.filename || '';
+    const arquivo = req.file?.filename; // Nome do arquivo salvo pelo multer
 
     // Validação básica
     if (!arquivo || !tipo || !descricao || !casoId || !req.usuario?.id) {
+      // Se houver arquivo mas validação falhar, remova-o
+      if (req.file) {
+        fs.unlinkSync(path.join(__dirname, '../uploads', req.file.filename));
+      }
       return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
     }
-
-    const urlPublica = `${req.protocol}://${req.get('host')}/uploads/${arquivo}`;
 
     const novaEvidencia = await Evidencia.create({
       caso: casoId,
       tipo,
       descricao,
-      caminhoArquivo: urlPublica,
-      imagem: arquivo, // opcional, mas útil para deletar depois
+      caminhoArquivo: `/uploads/${arquivo}`, // Caminho relativo para acesso
       uploadPor: req.usuario.id
     });
 
     res.status(201).json(novaEvidencia);
   } catch (err) {
+    // Se ocorrer erro, remove o arquivo enviado
+    if (req.file) {
+      fs.unlinkSync(path.join(__dirname, '../uploads', req.file.filename));
+    }
     console.error('Erro ao salvar evidência:', err);
     res.status(500).json({ error: 'Erro ao salvar evidência' });
   }
 };
 
-// Listar evidências por caso
 exports.listarEvidenciasPorCaso = async (req, res) => {
   try {
     const { casoId } = req.params;
