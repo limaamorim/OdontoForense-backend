@@ -1,39 +1,38 @@
 const Evidencia = require('../models/Evidencia');
+const fs = require('fs');
+const path = require('path');
 
+// Criar nova evidência
 exports.criarEvidencia = async (req, res) => {
   try {
     const { casoId } = req.params;
     const { tipo, descricao } = req.body;
+    const arquivo = req.file?.filename || '';
 
-    console.log('[DEBUG] Params:', req.params);
-    console.log('[DEBUG] Body:', req.body);
-    console.log('[DEBUG] File:', req.file);
-    console.log('[DEBUG] Usuario:', req.usuario);
-
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'Arquivo não enviado.' });
+    // Validação básica
+    if (!arquivo || !tipo || !descricao || !casoId || !req.usuario?.id) {
+      return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
     }
 
-    const urlPublica = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    const urlPublica = `${req.protocol}://${req.get('host')}/uploads/${arquivo}`;
 
     const novaEvidencia = await Evidencia.create({
       caso: casoId,
       tipo,
       descricao,
       caminhoArquivo: urlPublica,
+      imagem: arquivo, // opcional, mas útil para deletar depois
       uploadPor: req.usuario.id
     });
 
-    res.status(201).json({
-      success: true,
-      data: novaEvidencia,
-    });
+    res.status(201).json(novaEvidencia);
   } catch (err) {
-    console.error('[ERRO AO CRIAR EVIDÊNCIA]', err);
-    res.status(500).json({ success: false, error: 'Erro ao criar evidência' });
+    console.error('Erro ao salvar evidência:', err);
+    res.status(500).json({ error: 'Erro ao salvar evidência' });
   }
 };
 
+// Listar evidências por caso
 exports.listarEvidenciasPorCaso = async (req, res) => {
   try {
     const { casoId } = req.params;
@@ -47,10 +46,12 @@ exports.listarEvidenciasPorCaso = async (req, res) => {
       data: evidencias,
     });
   } catch (err) {
+    console.error('Erro ao listar evidências:', err);
     res.status(500).json({ success: false, error: 'Erro ao listar evidências' });
   }
 };
 
+// Atualizar evidência
 exports.atualizarEvidencia = async (req, res) => {
   try {
     const { id } = req.params;
@@ -63,13 +64,28 @@ exports.atualizarEvidencia = async (req, res) => {
       data: evidenciaAtualizada,
     });
   } catch (err) {
+    console.error('Erro ao atualizar evidência:', err);
     res.status(500).json({ success: false, error: 'Erro ao atualizar evidência' });
   }
 };
 
+// Deletar evidência
 exports.deletarEvidencia = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const evidencia = await Evidencia.findById(id);
+    if (!evidencia) {
+      return res.status(404).json({ success: false, error: 'Evidência não encontrada' });
+    }
+
+    // Remover imagem do disco
+    if (evidencia.imagem) {
+      const imagePath = path.join(__dirname, '../uploads', evidencia.imagem);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
 
     await Evidencia.findByIdAndDelete(id);
 
@@ -78,6 +94,7 @@ exports.deletarEvidencia = async (req, res) => {
       data: 'Evidência deletada com sucesso!',
     });
   } catch (err) {
+    console.error('Erro ao deletar evidência:', err);
     res.status(500).json({ success: false, error: 'Erro ao deletar evidência' });
   }
 };
