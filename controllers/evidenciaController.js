@@ -3,29 +3,58 @@ const Caso = require('../models/Caso');
 const fs = require('fs');
 const path = require('path');
 
-// POST /evidencias
+// Criar nova evidência
 exports.criarEvidencia = async (req, res) => {
-  const { nome, descricao, tipo, caso } = req.body;
-  const imagem = req.file?.filename;
-
-  if (!imagem) {
-    return res.status(400).json({ error: 'Imagem é obrigatória' });
-  }
-
   try {
-    const evidencia = await Evidencia.create({
-      nome,
+    const { descricao } = req.body;
+    const casoId = req.params.casoId;
+    const arquivo = req.file;
+
+    // Validação básica
+    if (!arquivo) {
+      return res.status(400).json({ error: 'Arquivo não enviado.' });
+    }
+
+    if (!descricao || !descricao.trim()) {
+      fs.unlinkSync(path.join(__dirname, '../uploads', arquivo.filename));
+      return res.status(400).json({ error: 'Descrição é obrigatória.' });
+    }
+
+    // Mapeamento do tipo com base no MIME
+    const tipoMapeado = {
+      'image/jpeg': 'foto',
+      'image/png': 'foto',
+      'image/gif': 'foto',
+      'application/pdf': 'documento'
+    };
+
+    const tipo = tipoMapeado[arquivo.mimetype] || 'outros';
+
+    // Criação da evidência
+    const novaEvidencia = await Evidencia.create({
+      nome: arquivo.originalname,          // nome do arquivo original
       descricao,
       tipo,
-      imagem,
-      caso
+      imagem: arquivo.filename,            // nome do arquivo salvo
+      caso: casoId
     });
 
-    await Caso.findByIdAndUpdate(caso, { $push: { evidencias: evidencia._id } });
+    // Relaciona a evidência ao caso
+    await Caso.findByIdAndUpdate(casoId, { $push: { evidencias: novaEvidencia._id } });
 
-    res.status(201).json(evidencia);
+    res.status(201).json(novaEvidencia);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao salvar evidência' });
+    console.error('Erro ao salvar evidência:', err);
+
+    // Remove o arquivo salvo se deu erro
+    if (req.file) {
+      const filePath = path.join(__dirname, '../uploads', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    res.status(500).json({ error: 'Erro ao salvar evidência.' });
   }
 };
 
