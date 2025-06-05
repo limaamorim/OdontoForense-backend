@@ -24,11 +24,7 @@ const EvidenciaSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  uploadPor: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario',
-    required: true
-  },
+  
 });
 
 module.exports = mongoose.model('Evidencia', EvidenciaSchema);
