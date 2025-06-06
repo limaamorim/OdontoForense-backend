@@ -5,7 +5,7 @@ const Vitima = require('../models/Vitima');
 
 exports.criarCaso = async (req, res) => {
   console.log('TIPO DE USUÁRIO NO BACKEND:', req.usuario.tipo);
-  const tiposPermitidos = ['perito', 'administrador'];
+  const tiposPermitidos = ['assistente', 'administrador'];
   if (!tiposPermitidos.includes(req.usuario.tipo)) {
     return res.status(403).json({ success: false, error: 'Apenas peritos ou administradores podem criar casos' });
   }
