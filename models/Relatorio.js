@@ -1,6 +1,3 @@
-const mongoose = require('mongoose');
-const mongoosePaginate = require('mongoose-paginate-v2');
-
 const RelatorioSchema = new mongoose.Schema({
   caso: {
     type: mongoose.Schema.Types.ObjectId,
@@ -24,11 +21,16 @@ const RelatorioSchema = new mongoose.Schema({
     enum: ['rascunho', 'finalizado', 'assinado', 'revisado'],
     default: 'rascunho'
   },
-  responsavel: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario', 
-    required: true
+  geradoPorIA: {
+    type: Boolean,
+    default: true
   },
+  versaoIA: {
+    type: String,
+    default: '1.0'
+  },
+  promptUsado: {
+    type: String,
+    required: false
+  }
 });
-
-module.exports = mongoose.model('Relatorio', RelatorioSchema);
