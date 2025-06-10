@@ -1,32 +1,31 @@
-const Relatorio = require('../models/Relatorio');
-const Caso = require('../models/Caso');
+const Relatorio = require('../models/relatorio');
+const IARelatorioService = require('../services/iaRelatorioService');
 
-// Criar um novo relatório
-exports.criarRelatorio = async (req, res) => {
-  try {
-    const { casoId, titulo, descricao, responsavel, observacoes } = req.body;
+class RelatorioController {
+  async criarRelatorio(req, res) {
+    try {
+      const { casoId } = req.params;
+      const { responsavelId } = req.body; // Ou pegue do token JWT
 
-    // Verifica se o caso existe
-    const caso = await Caso.findById(casoId);
-    if (!caso) {
-      return res.status(404).json({ message: 'Caso não encontrado' });
+      // Gerar relatório com IA
+      const { titulo, descricao, promptUsado } = await IARelatorioService.gerarRelatorio(casoId, responsavelId);
+
+      // Salvar no banco de dados
+      const novoRelatorio = await Relatorio.create({
+        caso: casoId,
+        titulo,
+        descricao,
+        responsavel: responsavelId,
+        geradoPorIA: true,
+        promptUsado,
+        status: 'rascunho'
+      });
+
+      res.status(201).json(novoRelatorio);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-
-    // Cria o relatório
-    const novoRelatorio = new Relatorio({
-      caso: casoId,
-      titulo,
-      descricao,
-      responsavel,
-      observacoes
-    });
-
-    await novoRelatorio.save();
-    res.status(201).json({ message: 'Relatório criado com sucesso', relatorio: novoRelatorio });
-  } catch (error) {
-    res.status(500).json({ message: 'Erro ao criar relatório', error: error.message });
   }
-};
 
 // Listar todos os relatórios de um caso específico
 exports.listarRelatoriosPorCaso = async (req, res) => {
