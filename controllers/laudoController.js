@@ -1,40 +1,60 @@
 const Laudo = require('../models/Laudo');
 const Evidencia = require('../models/Evidencia');
+const IALaudoService = require('../services/iaLaudoService');
 
-// Criar um novo laudo
+// Criar um novo laudo (com IA)
 exports.criarLaudo = async (req, res) => {
   try {
-    const { evidenciaId } = req.body;
+    const { evidenciaId, tipoLaudo, usarIA = false } = req.body;
 
-    // Verificar se a evidência existe
     const evidencia = await Evidencia.findById(evidenciaId);
     if (!evidencia) {
       return res.status(404).json({ msg: 'Evidência não encontrada' });
     }
 
-    // Verificar se o usuário é o perito responsável pela evidência
-    if (req.usuario.tipo === 'perito' && evidencia.uploadPor.toString() !== req.usuario.id) {
-      return res.status(401).json({ msg: 'Não autorizado' });
+    let laudoData;
+    
+    if (usarIA) {
+      const iaService = new IALaudoService(req.app.get('openai'));
+      const { conteudo, conclusao, promptUsado } = await iaService.gerarLaudo(
+        evidenciaId, 
+        req.usuario.id, 
+        tipoLaudo
+      );
+      
+      laudoData = {
+        evidencia: evidenciaId,
+        perito: req.usuario.id,
+        conteudo,
+        conclusao,
+        tipoLaudo,
+        geradoPorIA: true,
+        promptUsado,
+        status: 'rascunho'
+      };
+    } else {
+      laudoData = {
+        ...req.body,
+        perito: req.usuario.id,
+        status: 'rascunho'
+      };
     }
 
-    // Criar o laudo
-    const novoLaudo = new Laudo({
-      ...req.body,
-      perito: req.usuario.id
+    const novoLaudo = new Laudo(laudoData);
+    const laudoSalvo = await novoLaudo.save();
+
+    // Atualizar status da evidência
+    await Evidencia.findByIdAndUpdate(evidenciaId, { 
+      status: 'em_analise',
+      laudo: laudoSalvo._id 
     });
 
-    const laudo = await novoLaudo.save();
-
-    // Atualizar o status da evidência (opcional)
-    await Evidencia.findByIdAndUpdate(evidenciaId, { status: 'analisada' });
-
-    res.json(laudo);
+    res.status(201).json(laudoSalvo);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Erro no servidor');
   }
 };
-
 // Listar todos os laudos
 exports.listarLaudos = async (req, res) => {
   try {
