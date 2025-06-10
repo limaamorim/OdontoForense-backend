@@ -1,24 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const laudoController = require('../controllers/laudoController');
-// const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware');
+const peritoMiddleware = require('../middlewares/peritoMiddleware');
 
-// Rotas abertas
-router.post('/', laudoController.criarLaudo);
-router.get('/', laudoController.listarLaudos);
-router.get('/:id', laudoController.obterLaudo);
-router.put('/:id', laudoController.atualizarLaudo);
-router.put('/:id/finalizar', laudoController.finalizarLaudo);
-
-/*
-// Rotas protegidas (versão final)
+// Todas as rotas exigem autenticação
 router.use(authMiddleware);
 
-router.post('/', laudoController.criarLaudo);
+// Rotas abertas para peritos
+router.post('/', peritoMiddleware, laudoController.criarLaudo);
 router.get('/', laudoController.listarLaudos);
 router.get('/:id', laudoController.obterLaudo);
-router.put('/:id', laudoController.atualizarLaudo);
-router.put('/:id/finalizar', laudoController.finalizarLaudo);
-*/
+router.put('/:id', peritoMiddleware, laudoController.atualizarLaudo);
+router.put('/:id/finalizar', peritoMiddleware, laudoController.finalizarLaudo);
+
+// Nova rota para versão IA
+router.post('/ia', peritoMiddleware, laudoController.criarLaudoIA);
 
 module.exports = router;
