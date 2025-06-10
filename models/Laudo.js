@@ -4,7 +4,7 @@ const mongoosePaginate = require('mongoose-paginate-v2');
 const LaudoSchema = new mongoose.Schema({
   evidencia: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Evidencia',
+    ref: 'Evidencia', 
     required: true
   },
   perito: {
@@ -36,7 +36,24 @@ const LaudoSchema = new mongoose.Schema({
     type: String,
     enum: ['rascunho', 'finalizado', 'assinado', 'revisado'],
     default: 'rascunho'
+  },
+  geradoPorIA: {
+    type: Boolean,
+    default: false
+  },
+  versaoIA: {
+    type: String
+  },
+  promptUsado: {
+    type: String
+  },
+  tipoLaudo: {
+    type: String,
+    enum: ['odontologico', 'toxicológico', 'documentoscopia', 'balística', 'outros'],
+    required: true
   }
 });
+
+LaudoSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model('Laudo', LaudoSchema);
