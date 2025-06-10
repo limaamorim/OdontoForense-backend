@@ -26,6 +26,7 @@ class RelatorioController {
       res.status(500).json({ error: error.message });
     }
   }
+  module.exports = new RelatorioController();
 
 // Listar todos os relatórios de um caso específico
 exports.listarRelatoriosPorCaso = async (req, res) => {
