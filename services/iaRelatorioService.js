@@ -5,42 +5,41 @@ const Usuario = require('../models/Usuario');
 class IARelatorioService {
   constructor() {
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
     });
   }
 
   async gerarRelatorio(casoId, responsavelId) {
     try {
-      // Buscar informações completas do caso
       const caso = await Caso.findById(casoId)
         .populate('vitimas')
         .populate('evidencias')
         .populate('envolvidos');
-      
+
       const responsavel = await Usuario.findById(responsavelId);
 
       if (!caso) {
         throw new Error('Caso não encontrado');
       }
 
-      // Criar prompt detalhado para a IA
       const prompt = this.criarPrompt(caso, responsavel);
 
-      // Chamar a API da OpenAI
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini", // ou gpt-4 se disponível
+        model: 'mistral',
         messages: [
           {
-            role: "system",
-            content: "Você é um assistente especializado em gerar relatórios forenses detalhados e profissionais."
+            role: 'system',
+            content:
+              'Você é um assistente especializado em gerar relatórios forenses detalhados e profissionais.',
           },
           {
-            role: "user",
-            content: prompt
-          }
+            role: 'user',
+            content: prompt,
+          },
         ],
-        temperature: 0.3, // Menos criatividade, mais factual
-        max_tokens: 2000
+        temperature: 0.3,
+        max_tokens: 2000,
       });
 
       const conteudoRelatorio = response.choices[0].message.content;
@@ -48,7 +47,7 @@ class IARelatorioService {
       return {
         titulo: `Relatório do Caso ${caso.numero || caso._id}`,
         descricao: conteudoRelatorio,
-        promptUsado: prompt
+        promptUsado: prompt,
       };
     } catch (error) {
       console.error('Erro ao gerar relatório por IA:', error);
@@ -69,27 +68,39 @@ class IARelatorioService {
     - Categoria: ${caso.categoria}
 
     ## Vítimas:
-    ${caso.vitimas.map(v => `
+    ${caso.vitimas
+      .map(
+        (v) => `
       - Nome: ${v.nome}
       - Idade: ${v.idade}
       - Contato: ${v.contato}
       - Declaração: ${v.declaracao}
-    `).join('\n')}
+    `
+      )
+      .join('\n')}
 
     ## Evidências:
-    ${caso.evidencias.map(e => `
+    ${caso.evidencias
+      .map(
+        (e) => `
       - Tipo: ${e.tipo}
       - Descrição: ${e.descricao}
       - Local de coleta: ${e.localColeta}
       - Data de coleta: ${e.dataColeta}
-    `).join('\n')}
+    `
+      )
+      .join('\n')}
 
     ## Envolvidos:
-    ${caso.envolvidos.map(e => `
+    ${caso.envolvidos
+      .map(
+        (e) => `
       - Nome: ${e.nome}
       - Papel: ${e.papel}
       - Declaração: ${e.declaracao}
-    `).join('\n')}
+    `
+      )
+      .join('\n')}
 
     ## Responsável pelo relatório:
     - Nome: ${responsavel.nome}
