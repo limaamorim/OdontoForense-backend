@@ -60,21 +60,24 @@ exports.criarEvidencia = async (req, res) => {
 };
 
 // GET /evidencias
+// GET /evidencias
 exports.listarEvidencias = async (req, res) => {
   try {
     const filtro = {};
 
-    // Se casoId vier na query, filtra
     if (req.query.casoId) {
       filtro.caso = req.query.casoId;
     }
 
     const evidencias = await Evidencia.find(filtro).populate('caso');
-    res.json(evidencias);
+
+    // Envolvendo em um objeto com `data.docs`
+    res.json({ data: { docs: evidencias } });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar evidências' });
   }
 };
+
 
 
 // DELETE /evidencias/:id
