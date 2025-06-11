@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 const Caso = require('../models/Caso');
 const Usuario = require('../models/Usuario');
+const Vitima = require('../models/Vitima');  // <-- IMPORTANTE: importar o model de vítima
 
 class IARelatorioService {
   constructor() {
@@ -13,12 +14,11 @@ class IARelatorioService {
   async gerarRelatorio(casoId) {
     try {
       const caso = await Caso.findById(casoId).populate('evidencias');
+      if (!caso) throw new Error('Caso não encontrado');
 
-      if (!caso) {
-        throw new Error('Caso não encontrado');
-      }
+      const vitimas = await Vitima.find({ caso: caso._id });
 
-      const prompt = this.criarPrompt(caso);
+      const prompt = this.criarPrompt(caso, vitimas);
 
       const response = await this.openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -49,8 +49,12 @@ class IARelatorioService {
     }
   }
 
-  criarPrompt(caso) {
+  criarPrompt(caso, vitimas) {
     let evidenciasTexto = caso.evidencias.map(e => `- ${e.nome}: ${e.descricao} (${e.tipo})`).join('\n');
+
+    let vitimasTexto = vitimas.length > 0
+      ? vitimas.map(v => `- Nome: ${v.nome || 'N/A'}, Idade: ${v.idade || 'N/A'}, Gênero: ${v.genero}, NIC: ${v.nic}, Cor/Etnia: ${v.corEtnia || 'N/A'}`).join('\n')
+      : 'Nenhuma vítima cadastrada para este caso.';
 
     return `
 Gere um relatório forense preliminar com base nos dados:
@@ -60,6 +64,9 @@ Gere um relatório forense preliminar com base nos dados:
 - Descrição: ${caso.descricao}
 - Data da Ocorrência: ${caso.dataOcorrido ? caso.dataOcorrido.toLocaleDateString() : 'Não informado'}
 - Local: ${caso.local}
+
+Vítimas:
+${vitimasTexto}
 
 Evidências Coletadas:
 ${evidenciasTexto}
