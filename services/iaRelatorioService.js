@@ -50,13 +50,18 @@ class IARelatorioService {
   }
 
   criarPrompt(caso, vitimas) {
-    let evidenciasTexto = caso.evidencias.map(e => `- ${e.nome}: ${e.descricao} (${e.tipo})`).join('\n');
+  const backendUrl = 'https://odontoforense-backend.onrender.com/uploads/';
 
-    let vitimasTexto = vitimas.length > 0
-      ? vitimas.map(v => `- Nome: ${v.nome || 'N/A'}, Idade: ${v.idade || 'N/A'}, Gênero: ${v.genero}, NIC: ${v.nic}, Cor/Etnia: ${v.corEtnia || 'N/A'}`).join('\n')
-      : 'Nenhuma vítima cadastrada para este caso.';
+  let evidenciasTexto = caso.evidencias.map(e => {
+    const imagemURL = e.imagem ? `${backendUrl}${e.imagem}` : 'Sem imagem disponível';
+    return `- ${e.nome}: ${e.descricao} (${e.tipo}), Imagem: ${imagemURL}`;
+  }).join('\n');
 
-    return `
+  let vitimasTexto = vitimas.length > 0
+    ? vitimas.map(v => `- Nome: ${v.nome || 'N/A'}, Idade: ${v.idade || 'N/A'}, Gênero: ${v.genero}, NIC: ${v.nic}, Cor/Etnia: ${v.corEtnia || 'N/A'}`).join('\n')
+    : 'Nenhuma vítima cadastrada para este caso.';
+
+  return `
 Gere um relatório forense preliminar com base nos dados:
 
 - Número do Caso: ${caso.numeroCaso}
@@ -78,6 +83,7 @@ Instruções:
 - Seja técnico, objetivo e direto.
 `;
   }
+
 }
 
 module.exports = IARelatorioService;
