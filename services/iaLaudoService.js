@@ -4,15 +4,15 @@ const Evidencia = require('../models/Evidencia');
 class IALaudoService {
   constructor() {
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
     });
   }
 
   async gerarLaudo(evidenciaId, peritoId, tipoLaudo) {
     try {
       // Buscar evidência com detalhes
-      const evidencia = await Evidencia.findById(evidenciaId)
-        .populate('caso');  // Apenas popula o caso por enquanto
+      const evidencia = await Evidencia.findById(evidenciaId).populate('caso');
 
       if (!evidencia) {
         throw new Error('Evidência não encontrada');
@@ -22,19 +22,19 @@ class IALaudoService {
       const prompt = this.criarPrompt(evidencia, tipoLaudo);
 
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini", // ou gpt-4, se disponível para você
+        model: 'mistral', // ou 'mixtral', 'claude-3-haiku', etc.
         messages: [
           {
-            role: "system",
-            content: this.getSystemPrompt(tipoLaudo)
+            role: 'system',
+            content: this.getSystemPrompt(tipoLaudo),
           },
           {
-            role: "user",
-            content: prompt
-          }
+            role: 'user',
+            content: prompt,
+          },
         ],
         temperature: 0.2,
-        max_tokens: 1500
+        max_tokens: 1500,
       });
 
       const resultado = response.choices[0].message.content;
@@ -44,7 +44,7 @@ class IALaudoService {
         conteudo,
         conclusao,
         promptUsado: prompt,
-        tipoLaudo
+        tipoLaudo,
       };
     } catch (error) {
       console.error('Erro ao gerar laudo por IA:', error);
@@ -54,10 +54,13 @@ class IALaudoService {
 
   getSystemPrompt(tipoLaudo) {
     const prompts = {
-      'odontologico': 'Você é um perito odontológico forense. Gere laudos técnicos detalhados com linguagem especializada.',
-      'toxicológico': 'Você é um perito em toxicologia forense. Gere laudos com análises químicas precisas.',
-      'documentoscopia': 'Você é um perito em análise documental. Gere laudos de autenticidade de documentos.',
-      'default': 'Você é um perito forense. Gere laudos técnicos profissionais.'
+      odontologico:
+        'Você é um perito odontológico forense. Gere laudos técnicos detalhados com linguagem especializada.',
+      toxicológico:
+        'Você é um perito em toxicologia forense. Gere laudos com análises químicas precisas.',
+      documentoscopia:
+        'Você é um perito em análise documental. Gere laudos de autenticidade de documentos.',
+      default: 'Você é um perito forense. Gere laudos técnicos profissionais.',
     };
 
     return prompts[tipoLaudo] || prompts.default;
@@ -68,17 +71,17 @@ class IALaudoService {
     Gere um laudo pericial do tipo ${tipoLaudo} com base nestes dados:
 
     ## Dados da Evidência:
-    - Tipo: ${evidencia.tipo || 'Não informado'}
-    - Descrição: ${evidencia.descricao || 'Não informado'}
-    - Local de coleta: ${evidencia.localColeta || 'Não informado'}
-    - Data de coleta: ${evidencia.dataColeta ? new Date(evidencia.dataColeta).toLocaleDateString() : 'Não informado'}
+    - Tipo: ${evidencia.tipo}
+    - Descrição: ${evidencia.descricao}
+    - Local de coleta: ${evidencia.localColeta}
+    - Data de coleta: ${evidencia.dataColeta}
     - Método de coleta: ${evidencia.metodoColeta || 'Não informado'}
-    - Responsável pela coleta: ${(evidencia.uploadPor && evidencia.uploadPor.nome) || 'Não informado'}
+    - Responsável pela coleta: ${evidencia.uploadPor.nome}
 
     ## Dados do Caso Relacionado:
     - Número: ${evidencia.caso.numero || 'Não informado'}
-    - Tipo: ${evidencia.caso.tipo || 'Não informado'}
-    - Data: ${evidencia.caso.dataOcorrencia ? new Date(evidencia.caso.dataOcorrencia).toLocaleDateString() : 'Não informado'}
+    - Tipo: ${evidencia.caso.tipo}
+    - Data: ${evidencia.caso.dataOcorrencia}
 
     ## Instruções:
     - Estruture em: Introdução, Metodologia, Análise, Conclusão
@@ -92,12 +95,11 @@ class IALaudoService {
   }
 
   processarRespostaIA(resposta) {
-    // Separa conteúdo principal da conclusão
     const conclusaoIndex = resposta.lastIndexOf('CONCLUSÃO:');
     if (conclusaoIndex !== -1) {
       return [
         resposta.substring(0, conclusaoIndex).trim(),
-        resposta.substring(conclusaoIndex + 10).trim()
+        resposta.substring(conclusaoIndex + 10).trim(),
       ];
     }
     return [resposta, 'Conclusão não identificada na resposta da IA'];
