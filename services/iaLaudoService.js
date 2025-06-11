@@ -12,8 +12,7 @@ class IALaudoService {
     try {
       // Buscar evidência com detalhes
       const evidencia = await Evidencia.findById(evidenciaId)
-        .populate('caso')
-
+        .populate('caso');  // Apenas popula o caso por enquanto
 
       if (!evidencia) {
         throw new Error('Evidência não encontrada');
@@ -69,17 +68,17 @@ class IALaudoService {
     Gere um laudo pericial do tipo ${tipoLaudo} com base nestes dados:
 
     ## Dados da Evidência:
-    - Tipo: ${evidencia.tipo}
-    - Descrição: ${evidencia.descricao}
-    - Local de coleta: ${evidencia.localColeta}
-    - Data de coleta: ${evidencia.dataColeta}
+    - Tipo: ${evidencia.tipo || 'Não informado'}
+    - Descrição: ${evidencia.descricao || 'Não informado'}
+    - Local de coleta: ${evidencia.localColeta || 'Não informado'}
+    - Data de coleta: ${evidencia.dataColeta ? new Date(evidencia.dataColeta).toLocaleDateString() : 'Não informado'}
     - Método de coleta: ${evidencia.metodoColeta || 'Não informado'}
-    - Responsável pela coleta: ${evidencia.uploadPor.nome}
+    - Responsável pela coleta: ${(evidencia.uploadPor && evidencia.uploadPor.nome) || 'Não informado'}
 
     ## Dados do Caso Relacionado:
     - Número: ${evidencia.caso.numero || 'Não informado'}
-    - Tipo: ${evidencia.caso.tipo}
-    - Data: ${evidencia.caso.dataOcorrencia}
+    - Tipo: ${evidencia.caso.tipo || 'Não informado'}
+    - Data: ${evidencia.caso.dataOcorrencia ? new Date(evidencia.caso.dataOcorrencia).toLocaleDateString() : 'Não informado'}
 
     ## Instruções:
     - Estruture em: Introdução, Metodologia, Análise, Conclusão
