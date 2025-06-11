@@ -10,44 +10,38 @@ class IARelatorioService {
     });
   }
 
-  async gerarRelatorio(casoId, responsavelId) {
+  async gerarRelatorio(casoId) {
     try {
-      const caso = await Caso.findById(casoId)
-        .populate('vitimas')
-        .populate('evidencias')
-        .populate('envolvidos');
-
-      const responsavel = await Usuario.findById(responsavelId);
+      const caso = await Caso.findById(casoId).populate('evidencias');
 
       if (!caso) {
         throw new Error('Caso não encontrado');
       }
 
-      const prompt = this.criarPrompt(caso, responsavel);
+      const prompt = this.criarPrompt(caso);
 
       const response = await this.openai.chat.completions.create({
-        model: 'mistral',
+        model: "gpt-4o-mini",
         messages: [
           {
-            role: 'system',
-            content:
-              'Você é um assistente especializado em gerar relatórios forenses detalhados e profissionais.',
+            role: "system",
+            content: "Você é um perito forense. Gere um relatório técnico detalhado, com base nas informações abaixo."
           },
           {
-            role: 'user',
-            content: prompt,
-          },
+            role: "user",
+            content: prompt
+          }
         ],
-        temperature: 0.3,
-        max_tokens: 2000,
+        temperature: 0.2,
+        max_tokens: 1500
       });
 
-      const conteudoRelatorio = response.choices[0].message.content;
+      const resultado = response.choices[0].message.content;
 
       return {
-        titulo: `Relatório do Caso ${caso.numero || caso._id}`,
-        descricao: conteudoRelatorio,
-        promptUsado: prompt,
+        titulo: `Relatório Técnico - Caso ${caso.numeroCaso}`,
+        descricao: resultado,
+        promptUsado: prompt
       };
     } catch (error) {
       console.error('Erro ao gerar relatório por IA:', error);
@@ -55,68 +49,28 @@ class IARelatorioService {
     }
   }
 
-  criarPrompt(caso, responsavel) {
+  criarPrompt(caso) {
+    let evidenciasTexto = caso.evidencias.map(e => `- ${e.nome}: ${e.descricao} (${e.tipo})`).join('\n');
+
     return `
-    Gere um relatório forense profissional com base nas seguintes informações:
+Gere um relatório forense preliminar com base nos dados:
 
-    ## Dados do Caso:
-    - Título: ${caso.titulo}
-    - Descrição: ${caso.descricao}
-    - Data do incidente: ${caso.dataIncidente}
-    - Local: ${caso.local}
-    - Status: ${caso.status}
-    - Categoria: ${caso.categoria}
+- Número do Caso: ${caso.numeroCaso}
+- Título: ${caso.titulo}
+- Descrição: ${caso.descricao}
+- Data da Ocorrência: ${caso.dataOcorrido ? caso.dataOcorrido.toLocaleDateString() : 'Não informado'}
+- Local: ${caso.local}
 
-    ## Vítimas:
-    ${caso.vitimas
-      .map(
-        (v) => `
-      - Nome: ${v.nome}
-      - Idade: ${v.idade}
-      - Contato: ${v.contato}
-      - Declaração: ${v.declaracao}
-    `
-      )
-      .join('\n')}
+Evidências Coletadas:
+${evidenciasTexto}
 
-    ## Evidências:
-    ${caso.evidencias
-      .map(
-        (e) => `
-      - Tipo: ${e.tipo}
-      - Descrição: ${e.descricao}
-      - Local de coleta: ${e.localColeta}
-      - Data de coleta: ${e.dataColeta}
-    `
-      )
-      .join('\n')}
-
-    ## Envolvidos:
-    ${caso.envolvidos
-      .map(
-        (e) => `
-      - Nome: ${e.nome}
-      - Papel: ${e.papel}
-      - Declaração: ${e.declaracao}
-    `
-      )
-      .join('\n')}
-
-    ## Responsável pelo relatório:
-    - Nome: ${responsavel.nome}
-    - Cargo: ${responsavel.cargo}
-
-    ## Instruções:
-    - Formate como um documento profissional
-    - Inclua um resumo executivo no início
-    - Organize por seções lógicas
-    - Use linguagem formal e técnica quando apropriado
-    - Mantenha-se factual e objetivo
-    - Destaque pontos importantes para investigação
-    - Sugira próximos passos quando relevante
-    - Limite a 1500 palavras
-    `;
+Instruções:
+- Apresente análise preliminar com base apenas nestes dados.
+- Não invente informações.
+- Estruture em Introdução, Descrição dos Fatos, Análise, e Recomendações Finais.
+- Seja técnico, objetivo e direto.
+`;
   }
 }
 
-module.exports = new IARelatorioService();
+module.exports = IARelatorioService;
