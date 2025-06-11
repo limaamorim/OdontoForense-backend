@@ -8,33 +8,32 @@ class IALaudoService {
       baseURL: 'https://openrouter.ai/api/v1',
     });
   }
-
-  async gerarLaudo(evidenciaId, peritoId, tipoLaudo) {
+  async gerarLaudo(evidenciaId, tipoLaudo = 'odontológico') {
     try {
-      // Buscar evidência com detalhes
+      // Buscar evidência com caso populado
       const evidencia = await Evidencia.findById(evidenciaId).populate('caso');
 
       if (!evidencia) {
         throw new Error('Evidência não encontrada');
       }
 
-      // Criar prompt específico para tipo de laudo
+      // Montar prompt com base no model real
       const prompt = this.criarPrompt(evidencia, tipoLaudo);
 
       const response = await this.openai.chat.completions.create({
-        model: 'mistral', // ou 'mixtral', 'claude-3-haiku', etc.
+        model: "gpt-4o-mini", 
         messages: [
           {
-            role: 'system',
-            content: this.getSystemPrompt(tipoLaudo),
+            role: "system",
+            content: `Você é um perito forense especializado em ${tipoLaudo}. Gere laudos técnicos completos, objetivos, com introdução, metodologia, análise e conclusão.`
           },
           {
-            role: 'user',
-            content: prompt,
-          },
+            role: "user",
+            content: prompt
+          }
         ],
         temperature: 0.2,
-        max_tokens: 1500,
+        max_tokens: 1500
       });
 
       const resultado = response.choices[0].message.content;
@@ -44,7 +43,7 @@ class IALaudoService {
         conteudo,
         conclusao,
         promptUsado: prompt,
-        tipoLaudo,
+        tipoLaudo
       };
     } catch (error) {
       console.error('Erro ao gerar laudo por IA:', error);
@@ -52,54 +51,37 @@ class IALaudoService {
     }
   }
 
-  getSystemPrompt(tipoLaudo) {
-    const prompts = {
-      odontologico:
-        'Você é um perito odontológico forense. Gere laudos técnicos detalhados com linguagem especializada.',
-      toxicológico:
-        'Você é um perito em toxicologia forense. Gere laudos com análises químicas precisas.',
-      documentoscopia:
-        'Você é um perito em análise documental. Gere laudos de autenticidade de documentos.',
-      default: 'Você é um perito forense. Gere laudos técnicos profissionais.',
-    };
-
-    return prompts[tipoLaudo] || prompts.default;
-  }
-
   criarPrompt(evidencia, tipoLaudo) {
     return `
-    Gere um laudo pericial do tipo ${tipoLaudo} com base nestes dados:
+Gere um laudo técnico do tipo ${tipoLaudo} com base nas informações a seguir:
 
-    ## Dados da Evidência:
-    - Tipo: ${evidencia.tipo}
-    - Descrição: ${evidencia.descricao}
-    - Local de coleta: ${evidencia.localColeta}
-    - Data de coleta: ${evidencia.dataColeta}
-    - Método de coleta: ${evidencia.metodoColeta || 'Não informado'}
-    - Responsável pela coleta: ${evidencia.uploadPor.nome}
+## Dados da Evidência:
+- Nome: ${evidencia.nome}
+- Tipo: ${evidencia.tipo}
+- Descrição: ${evidencia.descricao}
+- Arquivo: ${evidencia.imagem}
 
-    ## Dados do Caso Relacionado:
-    - Número: ${evidencia.caso.numero || 'Não informado'}
-    - Tipo: ${evidencia.caso.tipo}
-    - Data: ${evidencia.caso.dataOcorrencia}
+## Dados do Caso:
+- Número do Caso: ${evidencia.caso.numeroCaso}
+- Título: ${evidencia.caso.titulo}
+- Descrição: ${evidencia.caso.descricao}
+- Data de Ocorrência: ${evidencia.caso.dataOcorrido ? evidencia.caso.dataOcorrido.toLocaleDateString() : 'Não informado'}
+- Local: ${evidencia.caso.local}
 
-    ## Instruções:
-    - Estruture em: Introdução, Metodologia, Análise, Conclusão
-    - Use terminologia técnica apropriada
-    - Seja conciso e objetivo
-    - Inclua todas as observações relevantes
-    - Destaque pontos importantes para investigação
-    - Limite a 1000 palavras
-    - Conclusão deve ser clara e fundamentada
-    `;
+## Instruções:
+- Estruture em: Introdução, Metodologia, Análise, Conclusão.
+- Use terminologia técnica.
+- Não invente dados não fornecidos.
+- Seja objetivo e claro.
+`;
   }
 
   processarRespostaIA(resposta) {
-    const conclusaoIndex = resposta.lastIndexOf('CONCLUSÃO:');
+    const conclusaoIndex = resposta.lastIndexOf('Conclusão:');
     if (conclusaoIndex !== -1) {
       return [
         resposta.substring(0, conclusaoIndex).trim(),
-        resposta.substring(conclusaoIndex + 10).trim(),
+        resposta.substring(conclusaoIndex + 10).trim()
       ];
     }
     return [resposta, 'Conclusão não identificada na resposta da IA'];
