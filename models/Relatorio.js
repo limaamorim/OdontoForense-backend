@@ -37,3 +37,8 @@ const RelatorioSchema = new mongoose.Schema({
     required: false
   }
 });
+
+RelatorioSchema.plugin(mongoosePaginate);
+
+// Agora exporta o model corretamente
+module.exports = mongoose.model('Relatorio', RelatorioSchema);
