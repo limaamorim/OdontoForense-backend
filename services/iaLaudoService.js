@@ -13,7 +13,7 @@ class IALaudoService {
       // Buscar evidência com detalhes
       const evidencia = await Evidencia.findById(evidenciaId)
         .populate('caso')
-        .populate('uploadPor');
+
 
       if (!evidencia) {
         throw new Error('Evidência não encontrada');
