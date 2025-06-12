@@ -1,25 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const Evidencia = require('../models/Evidencia');
-const upload = require('../middlewares/uploadMiddleware'); // seu multer configurado
+const Caso = require('../models/Caso'); // adicionei aqui pois será usado
+const upload = require('../middlewares/uploadMiddleware'); // multer configurado
 const evidenciaController = require('../controllers/evidenciaController');
 
-// Criar evidência vinculada a um caso (rota RESTful)
-router.post('/evidencias', upload.single('imagem'), async (req, res) => {
+// Rota corrigida para criação da evidência vinculada a um caso (rota RESTful)
+router.post('/casos/:casoId/evidencias', upload.single('imagem'), async (req, res) => {
   try {
+    const { casoId } = req.params;
+
+    // Cria a evidência usando a URL da imagem (Cloudinary já fornece URL pública em req.file.path)
     const novaEvidencia = new Evidencia({
-      casoId: req.body.casoId,
-      nome: req.body.nome,
-      imagem: req.file.path // <- atenção: Cloudinary já retorna a URL pública aqui
+      caso: casoId,              // chave correta para referenciar o caso no model Evidencia
+      nome: req.body.nome || req.file.originalname, // pega nome da evidência
+      tipo: req.body.tipo,
+      descricao: req.body.descricao,
+      imagem: req.file.path
     });
+
     await novaEvidencia.save();
+
+    // Atualiza o caso para referenciar a nova evidência
+    await Caso.findByIdAndUpdate(casoId, { $push: { evidencias: novaEvidencia._id } });
+
     res.status(201).json(novaEvidencia);
   } catch (err) {
-    console.error(err);
+    console.error('Erro ao salvar evidência:', err);
     res.status(500).json({ error: 'Erro ao salvar evidência' });
   }
 });
-
 
 // Listar evidências (pode filtrar por caso via query string)
 router.get('/', evidenciaController.listarEvidencias);
