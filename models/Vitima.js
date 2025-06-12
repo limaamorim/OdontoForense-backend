@@ -20,7 +20,8 @@ const VitimaSchema = new mongoose.Schema({
     enum: ['bebe', 'crianca', 'adolescente', 'adulta', 'idosa', 'nao_informado']
   },
   corEtnia: {
-    type: String
+    type: String,
+    enum: ['branca', 'preta', 'parda', 'amarela', 'indigena', 'nao_informado']
   },
   caso: [{
     type: mongoose.Schema.Types.ObjectId,
