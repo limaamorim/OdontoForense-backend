@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Evidencia = require('../models/Evidencia');
-const upload = require('../middleware/uploadMiddleware'); // Importe o middleware
+const upload = require('../middlewares/uploadMiddleware'); // Importe o middleware
 
 // POST /api/evidencias
 router.post('/', upload.single('imagem'), async (req, res) => {
