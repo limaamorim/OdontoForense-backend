@@ -1,251 +1,104 @@
-const Caso = require('../models/Caso');
 const Evidencia = require('../models/Evidencia');
-const Usuario = require('../models/Usuario');
-const Vitima = require('../models/Vitima');
+const Caso = require('../models/Caso');
+const fs = require('fs');
+const path = require('path');
 
-exports.criarCaso = async (req, res) => {
-  console.log('TIPO DE USUÁRIO NO BACKEND:', req.usuario.tipo);
-  const tiposPermitidos = ['perito', 'administrador'];
-  if (!tiposPermitidos.includes(req.usuario.tipo)) {
-    return res.status(403).json({ success: false, error: 'Apenas peritos ou administradores podem criar casos' });
-  }
-
-  const { numeroCaso, titulo, descricao, dataOcorrido, local, vitimas } = req.body;
-  if (!numeroCaso || !titulo || !descricao || !dataOcorrido || !local) {
-    return res.status(400).json({
-      success: false,
-      error: 'Campos obrigatórios faltando: numeroCaso, titulo, descricao, dataOcorrido, local'
-    });
-  }
-
-  const casoExistente = await Caso.findOne({ numeroCaso });
-  if (casoExistente) {
-    return res.status(400).json({ success: false, error: 'Já existe um caso com este número' });
-  }
-
-  const novoCaso = new Caso({
-    numeroCaso,
-    titulo,
-    descricao,
-    dataOcorrido,
-    local,
-    peritoResponsavel: req.usuario.id
-  });
-
-  // Criar vítimas (se fornecidas)
-  if (vitimas && Array.isArray(vitimas)) {
-    const vitimaIds = [];
-    for (const vitimaData of vitimas) {
-      const novaVitima = new Vitima({
-        ...vitimaData,
-        casos: [novoCaso._id]
-      });
-      const vitimaSalva = await novaVitima.save();
-      vitimaIds.push(vitimaSalva._id);
-    }
-    novoCaso.vitimas = vitimaIds;
-  }
-
-  const casoSalvo = await novoCaso.save();
-  res.status(201).json({ success: true, data: casoSalvo });
-};
-
-exports.listarCasos = async (req, res) => {
+// Criar nova evidência
+exports.criarEvidencia = async (req, res) => {
   try {
-    let query = {};
-    let options = {
-      page: parseInt(req.query.page) || 1,
-      limit: parseInt(req.query.limit) || 10,
-      sort: { dataAbertura: -1 },
-      populate: {
-        path: 'peritoResponsavel',
-        select: 'nome email'
+    const { descricao } = req.body;
+    const casoId = req.body.caso;
+    console.log({ body: req.body, file: req.file, params: req.params });
+    const arquivo = req.file;
+
+    // Validação básica
+    if (!arquivo) {
+      return res.status(400).json({ error: 'Arquivo não enviado.' });
+    }
+
+    if (!descricao || !descricao.trim()) {
+      fs.unlinkSync(path.join(__dirname, '../uploads', arquivo.filename));
+      return res.status(400).json({ error: 'Descrição é obrigatória.' });
+    }
+
+    // Mapeamento do tipo com base no MIME
+    const tipoMapeado = {
+      'image/jpeg': 'foto',
+      'image/png': 'foto',
+      'image/gif': 'foto',
+      'application/pdf': 'documento'
+    };
+
+    const tipo = tipoMapeado[arquivo.mimetype] || 'outros';
+
+    // Criação da evidência
+    const novaEvidencia = await Evidencia.create({
+      nome: arquivo.originalname,          // nome do arquivo original
+      descricao,
+      tipo,
+      imagem: arquivo.filename,            // nome do arquivo salvo
+      caso: casoId
+    });
+
+    // Relaciona a evidência ao caso
+    await Caso.findByIdAndUpdate(casoId, { $push: { evidencias: novaEvidencia._id } });
+
+    res.status(201).json(novaEvidencia);
+  } catch (err) {
+    console.error('Erro ao salvar evidência:', err);
+
+    // Remove o arquivo salvo se deu erro
+    if (req.file) {
+      const filePath = path.join(__dirname, '../uploads', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
       }
-    };
-
-    if (req.usuario.tipo === 'perito') {
-      query.peritoResponsavel = req.usuario.id;
     }
 
-    if (req.query.status) {
-      query.status = req.query.status;
-    }
-
-    const casos = await Caso.paginate(query, options);
-
-    res.json({ success: true, data: casos });
-  } catch (err) {
-    console.error('Erro ao listar casos:', err.message);
-    res.status(500).json({ success: false, error: 'Erro no servidor ao listar casos' });
+    res.status(500).json({ error: 'Erro ao salvar evidência.' });
   }
 };
 
-exports.obterCaso = async (req, res) => {
+// GET /evidencias
+// GET /evidencias
+exports.listarEvidencias = async (req, res) => {
   try {
-    const caso = await Caso.findById(req.params.id)
-      .populate('peritoResponsavel', 'nome email')
-      .populate('evidencias')
-      .populate('vitimas'); // <-- adiciona as vítimas
+    const filtro = {};
 
-    if (!caso) {
-      return res.status(404).json({ success: false, error: 'Caso não encontrado' });
+    if (req.query.casoId) {
+      filtro.caso = req.query.casoId;
     }
 
-    const usuario = req.usuario;
-    console.log('Usuário tentando acessar o caso:', usuario);
+    const evidencias = await Evidencia.find(filtro).populate('caso');
 
-    if (usuario.tipo === 'administrador' || usuario.tipo === 'perito') {
-      return res.json({ success: true, data: caso });
-    }
-
-    return res.status(403).json({ success: false, error: 'Acesso não autorizado' });
+    // Envolvendo em um objeto com `data.docs`
+    res.json({ data: { docs: evidencias } });
   } catch (err) {
-    console.error('Erro ao obter caso:', err.message);
-    return res.status(500).json({ success: false, error: 'Erro no servidor ao obter caso' });
+    res.status(500).json({ error: 'Erro ao buscar evidências' });
   }
 };
 
 
 
-exports.atualizarCaso = async (req, res) => {
+// DELETE /evidencias/:id
+exports.deletarEvidencia = async (req, res) => {
   try {
-    let caso = await Caso.findById(req.params.id);
+    const evidencia = await Evidencia.findById(req.params.id);
 
-    if (!caso) {
-      return res.status(404).json({ success: false, error: 'Caso não encontrado' });
+    if (!evidencia) {
+      return res.status(404).json({ error: 'Evidência não encontrada' });
     }
 
-    if (req.usuario.tipo === 'perito' && caso.peritoResponsavel.toString() !== req.usuario.id) {
-      return res.status(403).json({ success: false, error: 'Você só pode editar seus próprios casos' });
+    const imagePath = path.join(__dirname, '../uploads', evidencia.imagem);
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
     }
 
-    if (req.body.numeroCaso && req.body.numeroCaso !== caso.numeroCaso) {
-      return res.status(400).json({ success: false, error: 'Não é permitido alterar o número do caso' });
-    }
+    await Caso.findByIdAndUpdate(evidencia.caso, { $pull: { evidencias: evidencia._id } });
+    await Evidencia.findByIdAndDelete(req.params.id);
 
-    caso = await Caso.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    ).populate('peritoResponsavel', 'nome email');
-
-    res.json({ success: true, data: caso });
+    res.json({ message: 'Evidência deletada com sucesso' });
   } catch (err) {
-    console.error('Erro ao atualizar caso:', err.message);
-    if (err.name === 'ValidationError') {
-      const errors = Object.values(err.errors).map(el => el.message);
-      return res.status(400).json({ success: false, error: 'Erro de validação', details: errors });
-    }
-    res.status(500).json({ success: false, error: 'Erro no servidor ao atualizar caso' });
+    res.status(500).json({ error: 'Erro ao deletar evidência' });
   }
 };
-
-exports.buscarCasos = async (req, res) => {
-  try {
-    const { termo } = req.query;
-
-    if (!termo || termo.trim() === '') {
-      return res.status(400).json({ success: false, error: 'Termo de busca não fornecido' });
-    }
-
-    let query = {
-      $or: [
-        { numeroCaso: { $regex: termo, $options: 'i' } },
-        { titulo: { $regex: termo, $options: 'i' } },
-        { descricao: { $regex: termo, $options: 'i' } },
-        { local: { $regex: termo, $options: 'i' } }
-      ]
-    };
-
-    if (req.usuario.tipo === 'perito') {
-      query.peritoResponsavel = req.usuario.id;
-    }
-
-    const casos = await Caso.find(query)
-      .populate('peritoResponsavel', 'nome email')
-      .sort({ dataAbertura: -1 })
-      .limit(20);
-
-    res.json({ success: true, count: casos.length, data: casos });
-  } catch (err) {
-    console.error('Erro ao buscar casos:', err.message);
-    res.status(500).json({ success: false, error: 'Erro no servidor ao buscar casos' });
-  }
-};
-
-exports.adicionarEvidencia = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado' });
-    }
-
-    const caso = await Caso.findById(req.params.id);
-    if (!caso) {
-      return res.status(404).json({ success: false, error: 'Caso não encontrado' });
-    }
-
-   const novaEvidencia = new Evidencia({
-  caso: req.params.id,
-  nome: req.body.nome || req.file.originalname,
-  descricao: req.body.descricao || '',
-  tipo: req.body.tipo || 'outros',
-  imagem: req.file.filename
-});
-
-
-    await novaEvidencia.save();
-
-    await Caso.findByIdAndUpdate(req.params.id, {
-      $push: { evidencias: novaEvidencia._id }
-    });
-
-    res.status(201).json({ success: true, data: novaEvidencia });
-  } catch (err) {
-    console.error('Erro ao adicionar evidência:', err.message);
-    if (err.name === 'CastError') {
-      return res.status(400).json({ success: false, error: 'ID do caso inválido' });
-    }
-    res.status(500).json({ success: false, error: 'Erro no servidor ao adicionar evidência' });
-  }
-};
-
-exports.obterCasosRecentes = async (req, res) => {
-  try {
-    let filtro = {};
-    if (req.usuario.tipo === 'perito') {
-      filtro.peritoResponsavel = req.usuario.id;
-    }
-
-    const casosRecentes = await Caso.find(filtro)
-      .sort({ dataAbertura: -1 })
-      .limit(5)
-      .select('numeroCaso titulo status dataAbertura criadoEm');
-
-    console.log('Casos Recentes retornados pela API:', casosRecentes);
-
-    res.json(casosRecentes);
-  } catch (err) {
-    console.error('Erro ao listar casos recentes:', err.message);
-    res.status(500).json({ success: false, error: 'Erro ao buscar casos recentes' });
-  }
-};
-exports.deletarCaso = async (req, res) => {
-  try {
-    const caso = await Caso.findById(req.params.id);
-
-    if (!caso) {
-      return res.status(404).json({ success: false, error: 'Caso não encontrado' });
-    }
-
-    if (req.usuario.tipo === 'perito' && caso.peritoResponsavel.toString() !== req.usuario.id) {
-      return res.status(403).json({ success: false, error: 'Você só pode excluir seus próprios casos' });
-    }
-
-    await Caso.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: 'Caso deletado com sucesso' });
-  } catch (err) {
-    console.error('Erro ao deletar caso:', err.message);
-    res.status(500).json({ success: false, error: 'Erro no servidor ao deletar caso' });
-  }
-};
-
