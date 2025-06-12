@@ -40,15 +40,19 @@ exports.obterVitima = async (req, res) => {
   }
 };
 
-exports.atualizarCaso = async (req, res) => {
+exports.atualizarVitima = async (req, res) => {
   try {
-    const caso = await Caso.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!caso) return res.status(404).json({ msg: 'Caso não encontrado' });
+    const vitima = await Vitima.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
 
-    res.json(caso);
+    if (!vitima) return res.status(404).json({ msg: 'Vítima não encontrada' });
+
+    res.json(vitima);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: 'Erro ao atualizar caso' });
+    res.status(500).json({ msg: 'Erro ao atualizar vítima' });
   }
 };
 
