@@ -82,11 +82,7 @@ app.use('/api/evidencias', evidenciaRoutes);
 app.use('/api/vitimas', vitimaRoutes);
 
 // Arquivos estáticos com CORS para imagens
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res) => {
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  },
-}));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // =============================================
 // 4. ROTA DE STATUS E HEALTH CHECK
@@ -143,7 +139,8 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`🤖 IA de Relatórios: ${process.env.OPENAI_API_KEY ? 'Ativada' : 'Desativada'}`);
+  console.log(`🤖 IA de Relatórios: ${process.env.OPENROUTER_API_KEY ? 'Ativada' : 'Desativada'}`);
+
 });
 
 // Encerramento gracioso
