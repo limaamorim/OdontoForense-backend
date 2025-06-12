@@ -3,10 +3,10 @@ const bcrypt = require('bcryptjs');
 
 exports.criarUsuario = async (req, res) => {
   // 0. RESTRIÇÃO DE ACESSO
-  if (!req.usuario || !['administrador', 'assistente'].includes(req.usuario.tipo)) {
+  if (!req.usuario || !['administrador'].includes(req.usuario.tipo)) {
   return res.status(403).json({
     success: false,
-    error: 'Apenas administradores ou assistentes podem criar novos usuários'
+    error: 'Apenas administradores podem criar novos usuários'
   });
 }
 
