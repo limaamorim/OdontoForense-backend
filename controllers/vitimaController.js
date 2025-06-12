@@ -30,6 +30,15 @@ exports.listarVitimasPorCaso = async (req, res) => {
   }
 };
 
+exports.listarTodasVitimas = async (req, res) => {
+  try {
+    const vitimas = await Vitima.find();
+    res.json(vitimas);
+  } catch (err) {
+    res.status(500).json({ msg: 'Erro ao buscar todas as vítimas' });
+  }
+};
+
 exports.obterVitima = async (req, res) => {
   try {
     const vitima = await Vitima.findById(req.params.id);
