@@ -1,25 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const Evidencia = require('../models/Evidencia');
-const upload = require('../middlewares/uploadMiddleware'); // Importe o middleware
+const upload = require('../middlewares/uploadMiddleware'); // seu multer configurado
 const evidenciaController = require('../controllers/evidenciaController');
 
-// POST /api/evidencias
-router.post('/', upload.single('imagem'), async (req, res) => {
-  const { nome, descricao, tipo, caso } = req.body;
-  const imagem = req.file?.filename || '';
+// Criar evidência vinculada a um caso (rota RESTful)
+router.post('/casos/:casoId/evidencias', upload.single('imagem'), evidenciaController.criarEvidencia);
 
-  try {
-    const evidencia = await Evidencia.create({ nome, descricao, tipo, imagem, caso });
-    res.status(201).json(evidencia);
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao salvar evidência' });
-  }
-});
-// GET /evidencias
+// Listar evidências (pode filtrar por caso via query string)
 router.get('/', evidenciaController.listarEvidencias);
 
-// DELETE /evidencias/:id
+// Deletar evidência
 router.delete('/:id', evidenciaController.deletarEvidencia);
 
 module.exports = router;
