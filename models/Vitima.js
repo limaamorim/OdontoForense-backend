@@ -12,12 +12,12 @@ const VitimaSchema = new mongoose.Schema({
   },
   genero: {
     type: String,
-    enum: ['masculino', 'feminino', 'outro', 'não informado'],
+    enum: ['masculino', 'feminino', 'outro', 'nao informado'],
     required: true
   },
- idade: {
-  type: String,
-  enum: ["Criança", "Adolescente", "Adulta", "Idosa", "Não informado"]
+  idade: {
+    type: String,
+    enum: ['bebe', 'crianca', 'adolescente', 'adulta', 'idosa', 'nao_informado']
   },
   corEtnia: {
     type: String
