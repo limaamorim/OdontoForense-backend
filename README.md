@@ -11,6 +11,7 @@ Este é o backend do sistema **ODONTOCRIM**, uma plataforma de gestão de casos 
 - MongoDB + Mongoose
 - JWT (autenticação)
 - Multer (upload de arquivos)
+- Cloudinary (armazenamento de imagens e arquivos)
 - Dotenv (variáveis de ambiente)
 
 ---
