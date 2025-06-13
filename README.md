@@ -50,7 +50,7 @@ backend/
 ├── models/
 ├── routes/
 ├── middleware/
-├── uploads/         # Imagens e documentos enviados
+├── service/      # Imagens e documentos enviados
 ├── .env             # Configurações secretas
 ├── server.js
 ```
