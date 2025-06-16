@@ -54,14 +54,15 @@ exports.listarCasos = async (req, res) => {
   try {
     let query = {};
     let options = {
-      page: parseInt(req.query.page) || 1,
-      limit: parseInt(req.query.limit) || 10,
-      sort: { dataAbertura: -1 },
-      populate: {
-        path: 'peritoResponsavel',
-        select: 'nome email'
-      }
-    };
+     page: parseInt(req.query.page) || 1,
+     limit: parseInt(req.query.limit) || 10,
+    sort: { dataAbertura: -1 },
+    populate: [
+    { path: 'peritoResponsavel', select: 'nome email' },
+    { path: 'vitimas' }  // <-- adiciona essa linha
+  ]
+};
+
 
     if (req.usuario.tipo === 'perito') {
       query.peritoResponsavel = req.usuario.id;
