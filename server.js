@@ -15,6 +15,8 @@ const usuarioRoutes = require('./routes/usuarioRoutes');
 const relatorioRoutes = require('./routes/relatorioRoutes');
 const evidenciaRoutes = require('./routes/evidenciaRoutes');
 const vitimaRoutes = require('./routes/vitimaRoutes');
+const coeficientesRoutes = require('./routes/coeficientesRoutes');
+
 
 const app = express();
 
@@ -80,6 +82,8 @@ app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/relatorios', relatorioRoutes);
 app.use('/api/evidencias', evidenciaRoutes);
 app.use('/api/vitimas', vitimaRoutes);
+app.use('/api', coeficientesRoutes);
+
 
 // Arquivos estáticos com CORS para imagens
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
